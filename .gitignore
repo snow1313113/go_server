@@ -41,5 +41,5 @@
 # compiler temp file
 build/
 
-
-src/test/test
+# output dir
+bin/
