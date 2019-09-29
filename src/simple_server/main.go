@@ -6,12 +6,16 @@ import (
 )
 
 func run(worker simple_worker.Worker) {
-    fmt.Println(worker.Run())
+    worker.Run()
 }
 
 func main() {
-    echo_worker := simple_worker.EchoWorker{"hello world"}
     fmt.Println("start")
-    run(echo_worker)
+    worker := make([]simple_worker.Worker, 2)
+    worker[0] = simple_worker.EchoWorker{"hello world"}
+    worker[1] = simple_worker.CountWorker{1}
+    for _, v := range worker {
+        run(v)
+    }
 }
 
