@@ -1,4 +1,4 @@
-package pkg
+package protocol
 
 import (
     "fmt"
@@ -7,14 +7,15 @@ import (
     "encoding/binary"
 )
 
-// 可以自定义个error struct更好一点
+// todo 可以自定义个error struct更好一点
 var (
 	ErrDataBodyInvalid = errors.New("pkg body data len is invalid")
 )
 
 type PkgHead struct {
-    Cmd int32
-    BodyLen int32
+    Cmd uint32
+    Seq uint32
+    BodyLen uint32
 }
 
 type Pkg struct {
@@ -45,4 +46,8 @@ func (pkg *Pkg) Bytes(order binary.ByteOrder) ([]byte, error) {
         buffer.Write(pkg.Body)
     }
     return buffer.Bytes(), nil
+}
+
+type Message interface {
+    Test()
 }
