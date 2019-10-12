@@ -2,7 +2,7 @@ package base
 
 import (
     "fmt"
-	"sync"
+    "sync"
     "base"
     "protocol"
 )
@@ -20,7 +20,7 @@ type TCPChannel struct {
 
 func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
     channel := &TCPChannel{ip_and_port : addr, max_buf_len : buf_len}
-	return channel
+    return channel
 }
 
 func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, quit <-chan struct{}, handler func(*protocol.Pkg)error) {
