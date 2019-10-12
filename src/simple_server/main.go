@@ -2,6 +2,7 @@ package main
 
 import (
     "fmt"
+    "sync"
     "base"
     "protocol"
 )
@@ -13,7 +14,7 @@ type IExampleService interface {
     Hello2(*Hello2Req, *Hello2Rsp) error
 }
 
-type ExampleService struct{}
+type ExampleService []uint32
 
 func (s *ExampleService) Hello(*HelloReq, *HelloRsp) error {
     // todo
@@ -25,18 +26,23 @@ func (s *ExampleService) Hello2(*Hello2Req, *Hello2Rsp) error{
     return nil
 }
 
-var (
-    registed_methods MethodsRegister
-)
-
 func main() {
     fmt.Println("start")
 
-    example_service := ExampleService{}
-    err := base.RegistedMethods(example_service, registed_methods)
+    // 这里指定rpc的cmd，好丑的方式，如果用pb描述的话就应该能和rpc写在一起
+    example_service := ExampleService{0x01, 0x02}
+
+    svr := NewServer("localhost:1234", 512)
+    err := svr.RegisterService(example_service, example_service)
     if err != nil {
         fmt.Println("regist service err: ", err)
         return
     }
+
+    // todo 这样处理是不行的，而且还有stop没有处理，还是得起一个deamon进程去跑，deamon进程的方式还没研究
+    wg := sync.WaitGroup
+    wg.Add(1)
+    go svr.Run()
+    wg.Wait()
 }
 

@@ -45,13 +45,13 @@ func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message)) error {
     return nil
 }
 
-type MethodsRegister struct {
-    MethodMap map[uint32]RpcMethod
-}
-
-func RegisterMethod(service interface{}, register MethodsRegister) error {
+// 既然rpc method的结构在这里定义了，那如何解析注册也得在这里了
+func RegisterService(cmds []uint32, service interface{}, register func([]*RpcMethod) error) error {
     // 获取service的类型信息，可以从里面提取出所有的method
     st := reflect.TypeOf(service)
+    if len(cmds) > st.NumMethod(){
+        panic(fmt.Sprintln("cmd num > method num"))
+    }
     rpc_methods := make([]*RpcMethod, 0, st.NumMethod())
     for i := 0; i < st.NumMethod(); i++ {
         method := st.Method(i)
@@ -81,6 +81,7 @@ func RegisterMethod(service interface{}, register MethodsRegister) error {
         }
 
         rpc_method := &RpcMethod{
+            cmds[i],
             "todo string",
             reflect.ValueOf(service),
             req_type,
@@ -91,6 +92,5 @@ func RegisterMethod(service interface{}, register MethodsRegister) error {
         rpc_methods = append(rpc_methods, rpc_method)
     }
 
-    return register.Regist(rpc_methods)
+    return register(rpc_methods)
 }
-

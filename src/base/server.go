@@ -13,7 +13,7 @@ type Server struct {
     channel *TCPChannel
 }
 
-func (svr *Server) RegisterMethods(methods []*base.RpcMethod) error {
+func (svr *Server) register(methods []*base.RpcMethod) error {
     for _, method := range methods {
         cmd := method.Cmd()
         if _, ok := svr.rpc[cmd]; ok {
@@ -21,15 +21,18 @@ func (svr *Server) RegisterMethods(methods []*base.RpcMethod) error {
         }
         svr.rpc[cmd] = method
     }
-    // todo 这里应该调用rpc的RegisterMethod
     return nil
+}
+
+func (svr *Server) RegisterService(cmds []uint32, service interface{}) error {
+    return RegisterService(cmds, service, svr.register)
 }
 
 func (svr *Server) Run() error {
     wg := sync.WaitGroup{}
-	wg.Add(1)
-	go svr.channel.Serve(&wg, svr.quit, svr.HandleRequest)
-	wg.Wait()
+    wg.Add(1)
+    go svr.channel.Serve(&wg, svr.quit, svr.HandleRequest)
+    wg.Wait()
     // todo
     return nil
 }
