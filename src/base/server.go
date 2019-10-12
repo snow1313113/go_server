@@ -21,6 +21,7 @@ func (svr *Server) RegisterMethods(methods []*base.RpcMethod) error {
         }
         svr.rpc[cmd] = method
     }
+    // todo 这里应该调用rpc的RegisterMethod
     return nil
 }
 

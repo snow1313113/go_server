@@ -2,20 +2,41 @@ package main
 
 import (
     "fmt"
-    "simple_worker"
+    "base"
+    "protocol"
 )
 
-func run(worker simple_worker.Worker) {
-    worker.Run()
+type IExampleService interface {
+    // HelloReq之类的得实现了protocol.Message接口
+    // todo 传参数指针是为了减少拷贝和能把结果带回去，但是实际上是不是把rsp放在返回值回更好
+    Hello(*HelloReq, *HelloRsp) error
+    Hello2(*Hello2Req, *Hello2Rsp) error
 }
+
+type ExampleService struct{}
+
+func (s *ExampleService) Hello(*HelloReq, *HelloRsp) error {
+    // todo
+    return nil
+}
+
+func (s *ExampleService) Hello2(*Hello2Req, *Hello2Rsp) error{
+    // todo
+    return nil
+}
+
+var (
+    registed_methods MethodsRegister
+)
 
 func main() {
     fmt.Println("start")
-    worker := make([]simple_worker.Worker, 2)
-    worker[0] = simple_worker.EchoWorker{"hello world"}
-    worker[1] = simple_worker.CountWorker{1}
-    for _, v := range worker {
-        run(v)
+
+    example_service := ExampleService{}
+    err := base.RegistedMethods(example_service, registed_methods)
+    if err != nil {
+        fmt.Println("regist service err: ", err)
+        return
     }
 }
 

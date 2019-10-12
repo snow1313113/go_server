@@ -45,20 +45,11 @@ func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message)) error {
     return nil
 }
 
-/* service example
-type ExampleService interface {
-    // HelloReq之类的得实现了protocol.Message接口
-    // todo 传参数指针是为了减少拷贝和能把结果带回去，但是实际上是不是把rsp放在返回值回更好
-    Hello(*HelloReq, *HelloRsp) error
-    Hello2(*Hello2Req, *Hello2Rsp) error
-}
-*/
-
 type MethodsRegister struct {
     MethodMap map[uint32]RpcMethod
 }
 
-func RegisterMethod(name string, service interface{}, register MethodsRegister) error {
+func RegisterMethod(service interface{}, register MethodsRegister) error {
     // 获取service的类型信息，可以从里面提取出所有的method
     st := reflect.TypeOf(service)
     rpc_methods := make([]*RpcMethod, 0, st.NumMethod())
