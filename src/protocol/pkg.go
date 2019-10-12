@@ -9,10 +9,11 @@ import (
 
 // todo 可以自定义个error struct更好一点
 var (
-	ErrDataBodyInvalid = errors.New("pkg body data len is invalid")
+    ErrDataBodyInvalid = errors.New("pkg body data len is invalid")
 )
 
 type PkgHead struct {
+    Id uint32
     Cmd uint32
     Seq uint32
     BodyLen uint32
@@ -24,16 +25,16 @@ type Pkg struct {
 }
 
 func (pkg *Pkg) Parse(data []byte, order binary.ByteOrder) error {
-	buffer := bytes.NewBuffer(data)
-	err := binary.Read(buffer, order, &pkg.Head)
-	if err != nil {
-		return err
-	}
-	if pkg.Head.BodyLen != uint32(buffer.Len()) {
-		return ErrDataBodyInvalid
-	}
-	pkg.Body = buffer.Bytes()
-	return nil
+    buffer := bytes.NewBuffer(data)
+    err := binary.Read(buffer, order, &pkg.Head)
+    if err != nil {
+        return err
+    }
+    if pkg.Head.BodyLen != uint32(buffer.Len()) {
+        return ErrDataBodyInvalid
+    }
+    pkg.Body = buffer.Bytes()
+    return nil
 }
 
 func (pkg *Pkg) Bytes(order binary.ByteOrder) ([]byte, error) {
