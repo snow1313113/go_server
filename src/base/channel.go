@@ -2,12 +2,23 @@ package base
 
 import (
     "fmt"
+    "net"
     "sync"
     "base"
     "protocol"
 )
 
+type ChannelStatus uint32
+const (
+    _IdleStatus ChannelStatus = iota
+    _RunningStatus
+    _StopStatus
+)
+
 type TCPChannel struct {
+    listener net.Listener
+    status ChannelStatus
+    quit chan struct{}
     ip_and_port string
     max_buf_len uint32
     // todo 唯一ID怎么定义，简单点的就递增序列分配吧
@@ -19,11 +30,11 @@ type TCPChannel struct {
 }
 
 func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
-    channel := &TCPChannel{ip_and_port : addr, max_buf_len : buf_len}
+    channel := &TCPChannel{status:_IdleStatus, quit:make(chan struct{}), ip_and_port:addr,  max_buf_len:buf_len}
     return channel
 }
 
-func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, quit <-chan struct{}, handler func(*protocol.Pkg)error) {
+func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, handler func(*protocol.Pkg)error) {
     // 退出的时候要关闭链接和通知调用协程
     defer func () {
         conn.Close()
@@ -39,7 +50,7 @@ func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, quit <-chan str
     fmt.Println("new connect ...from: ", conn.RemoteAddr().String())
     for {
         select {
-        case <-quit:
+        case <-c.quit:
             // 收到信号就退出
             return
         default:
@@ -62,29 +73,45 @@ func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, quit <-chan str
     }
 }
 
-func (c *TCPChannel) Start(wg *sync.WaitGroup, quit <-chan struct{}, handler func(*protocol.Pkg)error) {
+func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error) {
     // 如果是协程方式调用，这里可以保证通知到调用的协程这个函数执行完了
     defer wg.Done()
 
     // 监听tcp端口
-    listener, err := net.Listen("tcp", ip_and_port)
+    c.listener, err := net.Listen("tcp", ip_and_port)
     if err != nil {
         fmt.Println("listen err : ", err)
         return
     }
 
+    c.status = _RunningStatus
+
     channel_wg := sync.WaitGroup
     for {
-        conn, err := listener.Accept()
+        conn, err := c.listener.Accept()
         if err != nil {
             fmt.Println("accept err : ", err)
+            if c.status == _StopStatus {
+                fmt.Println("stop accept")
+                break
+            }
         }
         channel_wg.Add(1)
         // todo 有新链接就启动一个协程处理，这样处理合理么？
-        go dealConn(conn, channel_wg, quit, handler)
+        go dealConn(conn, channel_wg, handler)
     }
     // 等待所有处理单独链接的协程退出
     channel_wg.Wait()
+
+    c.status = _IdleStatus
+}
+
+func (c *TCPChannel) ShutDown() {
+    if c.status == _RunningStatus {
+        c.status = _StopStatus
+        close(c.quit)
+        c.listener.Close()
+    }
 }
 
 func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {

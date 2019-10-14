@@ -2,6 +2,9 @@ package main
 
 import (
     "fmt"
+    "os"
+    "os/signal"
+    "syscall"
     "sync"
     "base"
     "protocol"
@@ -10,24 +13,31 @@ import (
 type IExampleService interface {
     // HelloReq之类的得实现了protocol.Message接口
     // todo 传参数指针是为了减少拷贝和能把结果带回去，但是实际上是不是把rsp放在返回值回更好
-    Hello(*HelloReq, *HelloRsp) error
-    Hello2(*Hello2Req, *Hello2Rsp) error
+    Hello(*protocol.HelloReq, *protocol.HelloRsp) error
+    Hello2(*protocol.HelloReq, *protocol.HelloRsp) error
 }
 
 type ExampleService []uint32
 
-func (s *ExampleService) Hello(*HelloReq, *HelloRsp) error {
-    // todo
+func (s *ExampleService) Hello(req *protocol.HelloReq, rsp *protocol.HelloRsp) error {
+    rsp.Name = req.Name
+    rsp.Num = req.Num
+    rsp.Seq = 1
     return nil
 }
 
-func (s *ExampleService) Hello2(*Hello2Req, *Hello2Rsp) error{
-    // todo
+func (s *ExampleService) Hello2(req *protocol.HelloReq, rsp *protocol.HelloRsp) error{
+    rsp.Name = req.Name
+    rsp.Num = req.Num
+    rsp.Seq = 2
     return nil
 }
 
 func main() {
     fmt.Println("start")
+
+    sig_chan := make(chan os.Signal, 1)
+    signal.Notify(sig_chan, syscall.SIGINT, syscall.SIGTERM)
 
     // 这里指定rpc的cmd，好丑的方式，如果用pb描述的话就应该能和rpc写在一起
     example_service := ExampleService{0x01, 0x02}
@@ -39,10 +49,15 @@ func main() {
         return
     }
 
-    // todo 这样处理是不行的，而且还有stop没有处理，还是得起一个deamon进程去跑，deamon进程的方式还没研究
-    wg := sync.WaitGroup
-    wg.Add(1)
     go svr.Run()
-    wg.Wait()
+
+    // 等待收到退出信号
+    for sig := range sig_chan {
+        fmt.Println("signal : ", sig)
+        break
+    }
+
+    // 直接调用stop
+    svr.Stop()
 }
 

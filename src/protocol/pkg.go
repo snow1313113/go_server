@@ -52,3 +52,22 @@ func (pkg *Pkg) Bytes(order binary.ByteOrder) ([]byte, error) {
 type Message interface {
     Test()
 }
+
+/// 测试用的几个协议包结构
+type HelloReq struct {
+    Name string
+    Num uint32
+}
+
+func (h *HelloReq) Test() {
+}
+
+type HelloRsp struct {
+    Name string
+    Num uint32
+    Seq uint32
+}
+
+func (h *HelloRsp) Test() {
+}
+
