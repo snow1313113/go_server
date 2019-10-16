@@ -2,9 +2,9 @@ package base
 
 import (
     "fmt"
+    "context"
     "net"
     "sync"
-    "base"
     "protocol"
 )
 
@@ -34,12 +34,9 @@ func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
     return channel
 }
 
-func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, handler func(*protocol.Pkg)error) {
-    // 退出的时候要关闭链接和通知调用协程
-    defer func () {
-        conn.Close()
-        wg.Done()
-    }()
+func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*protocol.Pkg)error) {
+    // 退出的时候要关闭链接
+    defer conn.Close()
 
     c.generate_id++
     new_id := c.generate_id
@@ -64,18 +61,22 @@ func (c *TCPChannel) dealConn(conn net.Conn, wg *sync.WaitGroup, handler func(*p
 
             // 简单点处理，这里把生成的唯一id给填上
             pkg.Id = new_id
-            err = handler(pkg)
-            if err != nil {
-                fmt.Println("handle pkg err: ", err)
-                continue
-            }
+            // 启动一个协程处理，没有context，其实就是没办法结束这个协程
+            go handler(pkg)
         }
     }
 }
 
 func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error) {
+
+    ctx, cancel := context.WithCancel(context.Background())
+
     // 如果是协程方式调用，这里可以保证通知到调用的协程这个函数执行完了
-    defer wg.Done()
+    defer func() {
+        c.status = _IdleStatus
+        cancel()
+        wg.Done()
+    }
 
     // 监听tcp端口
     c.listener, err := net.Listen("tcp", ip_and_port)
@@ -85,8 +86,6 @@ func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error)
     }
 
     c.status = _RunningStatus
-
-    channel_wg := sync.WaitGroup
     for {
         conn, err := c.listener.Accept()
         if err != nil {
@@ -96,14 +95,9 @@ func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error)
                 break
             }
         }
-        channel_wg.Add(1)
-        // todo 有新链接就启动一个协程处理，这样处理合理么？
-        go dealConn(conn, channel_wg, handler)
+        // 有新链接就启动一个协程处理，这样处理合理么？
+        go dealConn(ctx, conn, handler)
     }
-    // 等待所有处理单独链接的协程退出
-    channel_wg.Wait()
-
-    c.status = _IdleStatus
 }
 
 func (c *TCPChannel) ShutDown() {

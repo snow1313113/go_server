@@ -2,7 +2,6 @@ package base
 
 import (
     "fmt"
-    "base"
     "protocol"
 )
 
@@ -45,8 +44,28 @@ func (svr *Server) Stop() error {
     return nil
 }
 
-func (svr *Server) HandleRequest(req *protocol.Pkg) error {
-    return svr.channel.SendPkg(req.Id, req)
+func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
+    if method, ok := svr.rpc[cmd]; ok {
+        return fmt.Errorf("cmd:%X is not regist", pkg.Cmd)
+    }
+
+    req := method.NewReq()
+    if pkg.Body != nil {
+        err := req.Parse(pkg.Body)
+        if err != nil {
+            fmt.Println(pkg.Cmd, "parse err: ", err)
+            return err
+        }
+    }
+
+    rsp := method.NewRsp()
+    err := method.Call(req, rsp)
+    if err != nil {
+        fmt.Println(pkg.Cmd, "Call err: ", err)
+        return err
+    }
+
+    return nil
 }
 
 func (svr *Server) SendResponse(rsp *protocol.Pkg) error {

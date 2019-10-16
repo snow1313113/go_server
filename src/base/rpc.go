@@ -36,7 +36,8 @@ func (rpc *RpcMethod) NewRsp() protocol.Message {
     return reflect.New(rpc.rsp_type.Elem()).Interface().(protocol.Message)
 }
 
-func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message)) error {
+// 这里如果传入context，则需要业务逻辑处理context，这样不好，所以暂时干脆不传入了
+func (rpc *RpcMethod) Call(req *protocol.Message, rsp *protocol.Message)) error {
     args := []reflect.Value{rpc.receiver, reflect.ValueOf(req), reflect.ValueOf(rsp)}
     ret := rpc.method.Func.Call(args)
     if ret != nil {

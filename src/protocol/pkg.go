@@ -24,9 +24,9 @@ type Pkg struct {
     Body []byte
 }
 
-func (pkg *Pkg) Parse(data []byte, order binary.ByteOrder) error {
+func (pkg *Pkg) Parse(data []byte) error {
     buffer := bytes.NewBuffer(data)
-    err := binary.Read(buffer, order, &pkg.Head)
+    err := binary.Read(buffer, binary.LittleEndian, &pkg.Head)
     if err != nil {
         return err
     }
@@ -37,9 +37,9 @@ func (pkg *Pkg) Parse(data []byte, order binary.ByteOrder) error {
     return nil
 }
 
-func (pkg *Pkg) Bytes(order binary.ByteOrder) ([]byte, error) {
+func (pkg *Pkg) Bytes() ([]byte, error) {
     buffer := new(bytes.Buffer)
-    err := binary.Write(buffer, order, pkg.Head)
+    err := binary.Write(buffer, binary.LittleEndian, pkg.Head)
     if err != nil {
         return nil, err
     }
