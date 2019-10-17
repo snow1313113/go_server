@@ -3,6 +3,7 @@ package base
 import (
     "fmt"
     "context"
+    "syscall"
     "net"
     "sync"
     "protocol"
@@ -60,7 +61,7 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
             }
 
             // 简单点处理，这里把生成的唯一id给填上
-            pkg.Id = new_id
+            pkg.Head.Id = new_id
             // 启动一个协程处理，没有context，其实就是没办法结束这个协程
             go handler(pkg)
         }
@@ -76,15 +77,16 @@ func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error)
         c.status = _IdleStatus
         cancel()
         wg.Done()
-    }
+    }()
 
     // 监听tcp端口
-    c.listener, err := net.Listen("tcp", ip_and_port)
+    l, err := net.Listen("tcp", c.ip_and_port)
     if err != nil {
         fmt.Println("listen err : ", err)
         return
     }
 
+    c.listener = l
     c.status = _RunningStatus
     for {
         conn, err := c.listener.Accept()
@@ -96,7 +98,7 @@ func (c *TCPChannel) Start(wg *sync.WaitGroup, handler func(*protocol.Pkg)error)
             }
         }
         // 有新链接就启动一个协程处理，这样处理合理么？
-        go dealConn(ctx, conn, handler)
+        go c.dealConn(ctx, conn, handler)
     }
 }
 
@@ -109,9 +111,9 @@ func (c *TCPChannel) ShutDown() {
 }
 
 func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
-    if conn, is_exist := c.conn_map[id]; is_exist != nil {
-        fmt.Println(id, " not exist")
-        return is_exist
+    conn, is_exist := c.conn_map[id]
+    if !is_exist {
+        return fmt.Errorf("id:%u is not exist", id)
     }
 
     byte_buf, err := pkg.Bytes()
@@ -129,9 +131,9 @@ func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
 }
 
 func (c *TCPChannel) RecvPkg(id uint32, pkg *protocol.Pkg) error {
-    if conn, is_exist := c.conn_map[id]; is_exist != nil {
-        fmt.Println(id, " not exist")
-        return is_exist
+    conn, is_exist := c.conn_map[id]
+    if !is_exist {
+        return fmt.Errorf("id:%u is not exist", id)
     }
 
     // todo buffer可能要固定，不要每次recv都生成一个

@@ -3,6 +3,7 @@ package base
 import (
     "fmt"
     "reflect"
+    "errors"
     "protocol"
 )
 
@@ -37,13 +38,13 @@ func (rpc *RpcMethod) NewRsp() protocol.Message {
 }
 
 // 这里如果传入context，则需要业务逻辑处理context，这样不好，所以暂时干脆不传入了
-func (rpc *RpcMethod) Call(req *protocol.Message, rsp *protocol.Message)) error {
+func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message) error {
     args := []reflect.Value{rpc.receiver, reflect.ValueOf(req), reflect.ValueOf(rsp)}
     ret := rpc.method.Func.Call(args)
-    if ret != nil {
-        return ret
+    if ret != nil && ret[0].Interface() != nil {
+        return ret[0].Interface().(error)
     }
-    return nil
+    return errors.New("can not convert call ret to error")
 }
 
 // 既然rpc method的结构在这里定义了，那如何解析注册也得在这里了
@@ -51,7 +52,7 @@ func RegisterService(cmds []uint32, service interface{}, register func([]*RpcMet
     // 获取service的类型信息，可以从里面提取出所有的method
     st := reflect.TypeOf(service)
     if len(cmds) > st.NumMethod(){
-        panic(fmt.Sprintln("cmd num > method num"))
+        panic(fmt.Sprintln("cmd num > method num", len(cmds), st.NumMethod()))
     }
     rpc_methods := make([]*RpcMethod, 0, st.NumMethod())
     for i := 0; i < st.NumMethod(); i++ {

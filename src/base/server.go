@@ -2,16 +2,17 @@ package base
 
 import (
     "fmt"
+    "sync"
     "protocol"
 )
 
 type Server struct {
-    rpc map[uint32]*base.RpcMethod
+    rpc map[uint32]*RpcMethod
     is_running bool
     channel *TCPChannel
 }
 
-func (svr *Server) register(methods []*base.RpcMethod) error {
+func (svr *Server) registerhandle(methods []*RpcMethod) error {
     for _, method := range methods {
         cmd := method.Cmd()
         if _, ok := svr.rpc[cmd]; ok {
@@ -22,8 +23,8 @@ func (svr *Server) register(methods []*base.RpcMethod) error {
     return nil
 }
 
-func (svr *Server) RegisterService(cmds []uint32, service interface{}) error {
-    return RegisterService(cmds, service, svr.register)
+func (svr *Server) Registered(cmds []uint32, service interface{}) error {
+    return RegisterService(cmds, service, svr.registerhandle)
 }
 
 func (svr *Server) Run() error {
@@ -45,15 +46,16 @@ func (svr *Server) Stop() error {
 }
 
 func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
-    if method, ok := svr.rpc[cmd]; ok {
-        return fmt.Errorf("cmd:%X is not regist", pkg.Cmd)
+    method, ok := svr.rpc[pkg.Head.Cmd]
+    if !ok {
+        return fmt.Errorf("cmd:%X is not regist", pkg.Head.Cmd)
     }
 
     req := method.NewReq()
     if pkg.Body != nil {
         err := req.Parse(pkg.Body)
         if err != nil {
-            fmt.Println(pkg.Cmd, "parse err: ", err)
+            fmt.Println(pkg.Head.Cmd, "parse err: ", err)
             return err
         }
     }
@@ -61,7 +63,7 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
     rsp := method.NewRsp()
     err := method.Call(req, rsp)
     if err != nil {
-        fmt.Println(pkg.Cmd, "Call err: ", err)
+        fmt.Println(pkg.Head.Cmd, "Call err: ", err)
         return err
     }
 
@@ -69,12 +71,12 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
 }
 
 func (svr *Server) SendResponse(rsp *protocol.Pkg) error {
-    return svr.channel.SendPkg(rsp.Id, rsp)
+    return svr.channel.SendPkg(rsp.Head.Id, rsp)
 }
 
 func NewServer(addr string, cache_buf_len uint32) *Server {
     svr := &Server{}
-    svr.methods = make(map[uint32]*base.RpcMethod)
+    svr.rpc = make(map[uint32]*RpcMethod)
     svr.is_running = false
     svr.channel = NewTCPChannel(addr, cache_buf_len)
     return svr

@@ -1,7 +1,6 @@
 package protocol
 
 import (
-    "fmt"
     "bytes"
     "errors"
     "encoding/binary"
@@ -49,8 +48,11 @@ func (pkg *Pkg) Bytes() ([]byte, error) {
     return buffer.Bytes(), nil
 }
 
+// todo 其实对于普通的struct结构来说，parse和bytes都是一样的，
+// 所以其实看看能不能根据反射直接写成两个通用函数了
 type Message interface {
-    Test()
+    Parse([]byte) error
+    Bytes() ([]byte, error)
 }
 
 /// 测试用的几个协议包结构
@@ -59,7 +61,22 @@ type HelloReq struct {
     Num uint32
 }
 
-func (h *HelloReq) Test() {
+func (h *HelloReq) Parse(data []byte) error {
+    buffer := bytes.NewBuffer(data)
+    err := binary.Read(buffer, binary.LittleEndian, h)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+func (h *HelloReq) Bytes() ([]byte, error) {
+    buffer := new(bytes.Buffer)
+    err := binary.Write(buffer, binary.LittleEndian, h)
+    if err != nil {
+        return nil, err
+    }
+    return buffer.Bytes(), nil
 }
 
 type HelloRsp struct {
@@ -68,6 +85,23 @@ type HelloRsp struct {
     Seq uint32
 }
 
-func (h *HelloRsp) Test() {
+func (h *HelloRsp) Parse(data []byte) error {
+    buffer := bytes.NewBuffer(data)
+    err := binary.Read(buffer, binary.LittleEndian, h)
+    if err != nil {
+        return err
+    }
+    return nil
 }
+
+func (h *HelloRsp) Bytes() ([]byte, error) {
+    buffer := new(bytes.Buffer)
+    err := binary.Write(buffer, binary.LittleEndian, h)
+    if err != nil {
+        return nil, err
+    }
+    return buffer.Bytes(), nil
+}
+
+
 

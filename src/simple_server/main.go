@@ -5,7 +5,6 @@ import (
     "os"
     "os/signal"
     "syscall"
-    "sync"
     "base"
     "protocol"
 )
@@ -42,12 +41,15 @@ func main() {
     // 这里指定rpc的cmd，好丑的方式，如果用pb描述的话就应该能和rpc写在一起
     example_service := ExampleService{0x01, 0x02}
 
-    svr := NewServer("localhost:1234", 512)
-    err := svr.RegisterService(example_service, example_service)
+    svr := base.NewServer("localhost:1234", 512)
+    // 注意了，ExampleService的方法是用指针作为reciver的，所以这里要传指针给空接口，
+    // 不然反射出来的就不是IExampleService了
+    err := svr.Registered(example_service, &example_service)
     if err != nil {
         fmt.Println("regist service err: ", err)
         return
     }
+    fmt.Println("registred succeed")
 
     go svr.Run()
 
@@ -59,5 +61,6 @@ func main() {
 
     // 直接调用stop
     svr.Stop()
+    fmt.Println("stop svr")
 }
 
