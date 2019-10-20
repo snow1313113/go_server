@@ -27,6 +27,7 @@ func (s *ExampleService) Hello(req *protocol.HelloReq, rsp *protocol.HelloRsp) e
 }
 
 func (s *ExampleService) Hello2(req *protocol.HelloReq, rsp *protocol.HelloRsp) error{
+    fmt.Println("handle hello2 rpc, req: ", req)
     rsp.Name = req.Name
     rsp.Num = req.Num
     rsp.Seq = 2

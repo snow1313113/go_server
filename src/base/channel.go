@@ -2,6 +2,7 @@ package base
 
 import (
     "fmt"
+    "io"
     "context"
     "syscall"
     "net"
@@ -62,6 +63,11 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
             pkg := &protocol.Pkg{}
             err := c.RecvPkg(new_id, pkg)
             if err != nil {
+                if err == io.EOF {
+                    // 连接关闭，直接返回
+                    fmt.Println("client close connect")
+                    return
+                }
                 // todo 还没有日志系统，只能这样打了
                 fmt.Println("recv pkg err: ", err)
                 // todo 调试需要，先加一句sleep
@@ -152,14 +158,11 @@ func (c *TCPChannel) RecvPkg(id uint32, pkg *protocol.Pkg) error {
     case nil:
         err = pkg.Parse(buf[:buf_len])
         if err != nil {
-            // todo 还没有日志系统，只能这样打了
-            fmt.Println("parse pkg err: ", err)
             return err
         }
     case syscall.EAGAIN:
         // todo 需要把收到的数据缓存拼接一下，那这次recv怎么办，现在不考虑粘包的情况，等调通了来补
     default:
-        fmt.Println("read err : ", err)
         return err
     }
     return nil

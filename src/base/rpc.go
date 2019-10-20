@@ -41,10 +41,14 @@ func (rpc *RpcMethod) NewRsp() protocol.Message {
 func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message) error {
     args := []reflect.Value{rpc.receiver, reflect.ValueOf(req), reflect.ValueOf(rsp)}
     ret := rpc.method.Func.Call(args)
-    if ret != nil && ret[0].Interface() != nil {
+    if ret == nil {
+        return errors.New("Func.Call ret expect []value, but is nil")
+    }
+
+    if ret[0].Interface() != nil {
         return ret[0].Interface().(error)
     }
-    return errors.New("can not convert call ret to error")
+    return nil
 }
 
 // 既然rpc method的结构在这里定义了，那如何解析注册也得在这里了
