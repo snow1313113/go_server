@@ -63,7 +63,7 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
     rsp := method.NewRsp()
     err := method.Call(req, rsp)
     if err != nil {
-        fmt.Println(pkg.Head.Cmd, "Call err: ", err)
+        fmt.Println("cmd: ", pkg.Head.Cmd, " Call err: ", err)
         return err
     }
 

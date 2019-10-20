@@ -6,6 +6,7 @@ import (
     "syscall"
     "net"
     "sync"
+    "time"
     "protocol"
 )
 
@@ -31,7 +32,13 @@ type TCPChannel struct {
 }
 
 func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
-    channel := &TCPChannel{status:_IdleStatus, quit:make(chan struct{}), ip_and_port:addr,  max_buf_len:buf_len}
+    channel := &TCPChannel{}
+    channel.status = _IdleStatus
+    channel.quit = make(chan struct{})
+    channel.ip_and_port = addr
+    channel.max_buf_len = buf_len
+    channel.pending_pkg = make(map[uint32][]byte)
+    channel.conn_map = make(map[uint32]net.Conn)
     return channel
 }
 
@@ -57,6 +64,8 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
             if err != nil {
                 // todo 还没有日志系统，只能这样打了
                 fmt.Println("recv pkg err: ", err)
+                // todo 调试需要，先加一句sleep
+                time.Sleep(time.Duration(2)*time.Second)
                 continue
             }
 

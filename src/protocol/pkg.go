@@ -57,7 +57,7 @@ type Message interface {
 
 /// 测试用的几个协议包结构
 type HelloReq struct {
-    Name string
+    Name uint32
     Num uint32
 }
 
@@ -80,7 +80,7 @@ func (h *HelloReq) Bytes() ([]byte, error) {
 }
 
 type HelloRsp struct {
-    Name string
+    Name uint32
     Num uint32
     Seq uint32
 }
@@ -96,7 +96,7 @@ func (h *HelloRsp) Parse(data []byte) error {
 
 func (h *HelloRsp) Bytes() ([]byte, error) {
     buffer := new(bytes.Buffer)
-    err := binary.Write(buffer, binary.LittleEndian, h)
+    err := binary.Write(buffer, binary.LittleEndian, *h)
     if err != nil {
         return nil, err
     }

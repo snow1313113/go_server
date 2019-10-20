@@ -19,6 +19,7 @@ type IExampleService interface {
 type ExampleService []uint32
 
 func (s *ExampleService) Hello(req *protocol.HelloReq, rsp *protocol.HelloRsp) error {
+    fmt.Println("handle hello rpc, req: ", req)
     rsp.Name = req.Name
     rsp.Num = req.Num
     rsp.Seq = 1
