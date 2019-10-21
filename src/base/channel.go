@@ -56,6 +56,8 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
     fmt.Println("new connect ...from: ", conn.RemoteAddr().String())
     for {
         select {
+        case <-ctx.Done():
+            return
         case <-c.quit:
             // 收到信号就退出
             return

@@ -1,0 +1,12 @@
+
+- [ ] 统一的error结构
+- [ ] 统一的日志包
+- [ ] 合理的超时处理机制
+- [ ] daemon进程
+- [ ] 进程间通信封装
+- [ ] protobuf的引入
+- [ ] service interface 和 service stub 的自动生成
+- [ ] 接入层连接唯一ID产生和连接维护
+- [ ] 心跳机制
+- [ ] rsp给客户端回包
+- [ ] tcp粘包问题
