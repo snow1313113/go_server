@@ -6,6 +6,7 @@ import (
     "os/signal"
     "syscall"
     "base"
+    "daemon"
     "protocol"
 )
 
@@ -39,6 +40,8 @@ func main() {
 
     sig_chan := make(chan os.Signal, 1)
     signal.Notify(sig_chan, syscall.SIGINT, syscall.SIGTERM)
+
+    daemon.Daemon(1, 1)
 
     // 这里指定rpc的cmd，好丑的方式，如果用pb描述的话就应该能和rpc写在一起
     example_service := ExampleService{0x01, 0x02}
