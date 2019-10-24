@@ -15,6 +15,7 @@ type PkgHead struct {
     Id uint32
     Cmd uint32
     Seq uint32
+    Ret int32
     BodyLen uint32
 }
 

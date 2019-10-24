@@ -8,5 +8,6 @@
 - [ ] service interface 和 service stub 的自动生成
 - [ ] 接入层连接唯一ID产生和维护
 - [ ] 心跳机制
-- [ ] rsp给客户端回包
+- [x] rsp给客户端回包
 - [ ] tcp粘包问题
+- [x] 测试客户端增加收包逻辑

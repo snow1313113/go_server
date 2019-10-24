@@ -67,6 +67,19 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
         return err
     }
 
+    rsp_pkg := protocol.Pkg{}
+    rsp_pkg.Head.Id = pkg.Head.Id
+    rsp_pkg.Head.Cmd = pkg.Head.Cmd
+    rsp_pkg.Head.Seq = pkg.Head.Seq
+    rsp_pkg.Head.Ret = 0
+    rsp_pkg.Body, err = rsp.Bytes()
+    if err != nil {
+        fmt.Println(rsp, " bytes err: ", err)
+        return err
+    }
+    rsp_pkg.Head.BodyLen = uint32(len(rsp_pkg.Body))
+
+    svr.SendResponse(&rsp_pkg)
     return nil
 }
 
