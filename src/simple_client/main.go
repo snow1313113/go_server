@@ -9,6 +9,7 @@ import (
     "context"
     "sync"
     "protocol"
+    pb "github.com/golang/protobuf/proto"
 )
 
 func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
@@ -25,10 +26,10 @@ func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
             pkg.Head.Cmd = 0x01
             pkg.Head.Seq = uint32(i)
 
-            req := protocol.HelloReq{uint32(i*100), 10}
-            body, err := req.Bytes()
+            req := protocol.HelloReq {"test hello", uint32(i*100)}
+            body, err := pb.Marshal(&req)
             if err != nil {
-                fmt.Println("req bytes err:", err)
+                fmt.Println("Marshal err:", err)
                 return
             }
             pkg.Body = body

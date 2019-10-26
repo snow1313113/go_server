@@ -4,6 +4,7 @@ import (
     "fmt"
     "sync"
     "protocol"
+    pb "github.com/golang/protobuf/proto"
 )
 
 type Server struct {
@@ -53,9 +54,9 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
 
     req := method.NewReq()
     if pkg.Body != nil {
-        err := req.Parse(pkg.Body)
+        err := pb.Unmarshal(pkg.Body, req)
         if err != nil {
-            fmt.Println(pkg.Head.Cmd, "parse err: ", err)
+            fmt.Println(pkg.Head.Cmd, "Unmarshal err: ", err)
             return err
         }
     }
@@ -72,9 +73,9 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
     rsp_pkg.Head.Cmd = pkg.Head.Cmd
     rsp_pkg.Head.Seq = pkg.Head.Seq
     rsp_pkg.Head.Ret = 0
-    rsp_pkg.Body, err = rsp.Bytes()
+    rsp_pkg.Body, err = pb.Marshal(rsp)
     if err != nil {
-        fmt.Println(rsp, " bytes err: ", err)
+        fmt.Println(rsp, " Marshal err: ", err)
         return err
     }
     rsp_pkg.Head.BodyLen = uint32(len(rsp_pkg.Body))

@@ -4,8 +4,9 @@
 - [ ] 合理的超时处理机制
 - [x] daemon进程
 - [ ] 进程间通信封装
-- [ ] protobuf的引入
-- [ ] service interface 和 service stub 的自动生成
+- [x] protobuf的引入
+- [x] service interface 的自动生成
+- [ ] service stub 的自动生成
 - [ ] 接入层连接唯一ID产生和维护
 - [ ] 心跳机制
 - [x] rsp给客户端回包

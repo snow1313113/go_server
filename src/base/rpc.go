@@ -4,7 +4,7 @@ import (
     "fmt"
     "reflect"
     "errors"
-    "protocol"
+    pb "github.com/golang/protobuf/proto"
 )
 
 type RpcMethod struct {
@@ -25,20 +25,18 @@ func (rpc *RpcMethod) Name() string {
     return rpc.name
 }
 
-func (rpc *RpcMethod) NewReq() protocol.Message {
-    // todo 如果是proto的话返回的是proto.Message，这个应该是interface
+func (rpc *RpcMethod) NewReq() pb.Message {
     // register的时候判断过了Kind是指针，所以可以直接放心的调用Elem
-    return reflect.New(rpc.req_type.Elem()).Interface().(protocol.Message)
+    return reflect.New(rpc.req_type.Elem()).Interface().(pb.Message)
 }
 
-func (rpc *RpcMethod) NewRsp() protocol.Message {
-    // todo 如果是proto的话返回的是proto.Message，这个应该是interface
+func (rpc *RpcMethod) NewRsp() pb.Message {
     // register的时候判断过了Kind是指针，所以可以直接放心的调用Elem
-    return reflect.New(rpc.rsp_type.Elem()).Interface().(protocol.Message)
+    return reflect.New(rpc.rsp_type.Elem()).Interface().(pb.Message)
 }
 
 // 这里如果传入context，则需要业务逻辑处理context，这样不好，所以暂时干脆不传入了
-func (rpc *RpcMethod) Call(req protocol.Message, rsp protocol.Message) error {
+func (rpc *RpcMethod) Call(req pb.Message, rsp pb.Message) error {
     args := []reflect.Value{rpc.receiver, reflect.ValueOf(req), reflect.ValueOf(rsp)}
     ret := rpc.method.Func.Call(args)
     if ret == nil {

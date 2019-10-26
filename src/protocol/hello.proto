@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package protocol;
+
+message HelloReq
+{
+    string name = 1;
+    uint32 num = 2;
+}
+
+message HelloRsp
+{
+    string name  = 1;
+    uint32 num  = 2;
+    uint32 seq  = 3;
+}
+
+message EchoReq
+{
+    string info = 1;
+}
+
+message EchoRsp
+{
+    string rsp_info = 1;
+    uint32 seq  = 2;
+}

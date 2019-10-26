@@ -1,0 +1,10 @@
+syntax = "proto3";
+import "hello.proto";
+
+package protocol;
+
+service ExampleService
+{
+    rpc Hello(HelloReq) returns(HelloRsp) { }
+    rpc Echo(EchoReq) returns(EchoRsp) { }
+}

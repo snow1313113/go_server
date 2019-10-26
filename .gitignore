@@ -34,9 +34,10 @@
 # Editor swap file
 *.swp
 
-# Protobuf c++ file
+# Protobuf generate file
 *.pb.h
 *.pb.cc
+*.pb.go
 
 # compiler temp file
 build/

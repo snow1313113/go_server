@@ -59,10 +59,6 @@ func (g *pepperGen) Generate(file *generator.FileDescriptor) {
 		return
 	}
 
-	g.P("// Reference imports to suppress errors if they are not otherwise used.")
-	g.P("var _ context.Context")
-	g.P()
-
 	for i, service := range file.FileDescriptorProto.Service {
 		g.generateService(file, service, i)
 	}
@@ -101,5 +97,5 @@ func (g *pepperGen) genMethod(servName string, method *desc.MethodDescriptorProt
 	methName := generator.CamelCase(origMethName)
 	inType := g.typeName(method.GetInputType())
 	outType := g.typeName(method.GetOutputType())
-	return methName + "(context.Context, *" + inType + ", *" + outType + ") error"
+	return methName + "(*" + inType + ", *" + outType + ") error"
 }

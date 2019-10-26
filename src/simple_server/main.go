@@ -10,27 +10,19 @@ import (
     "protocol"
 )
 
-type IExampleService interface {
-    // HelloReq之类的得实现了protocol.Message接口
-    // todo 传参数指针是为了减少拷贝和能把结果带回去，但是实际上是不是把rsp放在返回值回更好
-    Hello(*protocol.HelloReq, *protocol.HelloRsp) error
-    Hello2(*protocol.HelloReq, *protocol.HelloRsp) error
-}
-
 type ExampleService []uint32
 
 func (s *ExampleService) Hello(req *protocol.HelloReq, rsp *protocol.HelloRsp) error {
     fmt.Println("handle hello rpc, req: ", req)
-    rsp.Name = req.Name
-    rsp.Num = req.Num
+    rsp.Name = req.GetName()
+    rsp.Num = req.GetNum()
     rsp.Seq = 1
     return nil
 }
 
-func (s *ExampleService) Hello2(req *protocol.HelloReq, rsp *protocol.HelloRsp) error{
-    fmt.Println("handle hello2 rpc, req: ", req)
-    rsp.Name = req.Name
-    rsp.Num = req.Num
+func (s *ExampleService) Echo(req *protocol.EchoReq, rsp *protocol.EchoRsp) error{
+    fmt.Println("handle echo rpc, req: ", req)
+    rsp.RspInfo = req.GetInfo()
     rsp.Seq = 2
     return nil
 }
@@ -48,7 +40,7 @@ func main() {
 
     svr := base.NewServer("localhost:1234", 512)
     // 注意了，ExampleService的方法是用指针作为reciver的，所以这里要传指针给空接口，
-    // 不然反射出来的就不是IExampleService了
+    // 不然反射出来的就不是ExampleService了
     err := svr.Registered(example_service, &example_service)
     if err != nil {
         fmt.Println("regist service err: ", err)
