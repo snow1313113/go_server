@@ -18,6 +18,15 @@ const (
     _StopStatus
 )
 
+type connectInfo struct {
+    // 链接分配的session id
+    Id uint32
+    // 当前链接
+    Connect net.Conn
+    // 链接使用的收包buf
+    Buffer []byte
+}
+
 type TCPChannel struct {
     listener net.Listener
     status ChannelStatus
@@ -26,10 +35,8 @@ type TCPChannel struct {
     max_buf_len uint32
     // todo 唯一ID怎么定义，简单点的就递增序列分配吧
     generate_id uint32
-    // 一个connect有一个缓冲，用来存没有收完的包
-    pending_pkg map[uint32][]byte
     // 一个唯一id对应一个connect
-    conn_map map[uint32]net.Conn
+    conn_map map[uint32]*connectInfo
 }
 
 func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
@@ -38,8 +45,7 @@ func NewTCPChannel(addr string, buf_len uint32) *TCPChannel {
     channel.quit = make(chan struct{})
     channel.ip_and_port = addr
     channel.max_buf_len = buf_len
-    channel.pending_pkg = make(map[uint32][]byte)
-    channel.conn_map = make(map[uint32]net.Conn)
+    channel.conn_map = make(map[uint32]*connectInfo)
     return channel
 }
 
@@ -49,10 +55,9 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
 
     c.generate_id++
     new_id := c.generate_id
-    c.conn_map[new_id] = conn
+    c.conn_map[new_id] = &connectInfo{Id:new_id, Connect:conn, Buffer:make([]byte, c.max_buf_len)}
     defer delete(c.conn_map, new_id)
 
-    // todo 还没有日志系统，只能这样打了
     fmt.Println("new connect ...from: ", conn.RemoteAddr().String())
     for {
         select {
@@ -70,7 +75,6 @@ func (c *TCPChannel) dealConn(ctx context.Context, conn net.Conn, handler func(*
                     fmt.Println("client close connect")
                     return
                 }
-                // todo 还没有日志系统，只能这样打了
                 fmt.Println("recv pkg err: ", err)
                 // todo 调试需要，先加一句sleep
                 time.Sleep(time.Duration(2)*time.Second)
@@ -128,7 +132,7 @@ func (c *TCPChannel) ShutDown() {
 }
 
 func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
-    conn, is_exist := c.conn_map[id]
+    conn_info, is_exist := c.conn_map[id]
     if !is_exist {
         return fmt.Errorf("id:%u is not exist", id)
     }
@@ -139,7 +143,7 @@ func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
         return err
     }
 
-    _, err = conn.Write(byte_buf)
+    _, err = conn_info.Connect.Write(byte_buf)
     if err != nil {
         fmt.Println("write err : ", err)
         return err
@@ -148,17 +152,15 @@ func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
 }
 
 func (c *TCPChannel) RecvPkg(id uint32, pkg *protocol.Pkg) error {
-    conn, is_exist := c.conn_map[id]
+    conn_info, is_exist := c.conn_map[id]
     if !is_exist {
         return fmt.Errorf("id:%u is not exist", id)
     }
 
-    // todo buffer可能要固定，不要每次recv都生成一个
-    buf := make([]byte, c.max_buf_len)
-    buf_len, err := conn.Read(buf)
+    buf_len, err := conn_info.Connect.Read(conn_info.Buffer)
     switch err {
     case nil:
-        err = pkg.Parse(buf[:buf_len])
+        err = pkg.Parse(conn_info.Buffer[:buf_len])
         if err != nil {
             return err
         }

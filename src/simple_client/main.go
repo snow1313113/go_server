@@ -41,7 +41,6 @@ func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
                 return
             }
 
-            fmt.Println("here")
             _, err = conn.Write(b)
             if err != nil {
                 fmt.Println("write err : ", err)
