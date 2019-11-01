@@ -8,6 +8,8 @@ import (
     "net"
     "sync"
     "time"
+    "bytes"
+    "encoding/binary"
     "protocol"
 )
 
@@ -143,7 +145,15 @@ func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
         return err
     }
 
-    _, err = conn_info.Connect.Write(byte_buf)
+    pkg_len := len(byte_buf)
+    buffer := new(bytes.Buffer)
+    err = binary.Write(buffer, binary.LittleEndian, uint32(pkg_len))
+    if err != nil {
+        return err
+    }
+    binary.Write(buffer, binary.LittleEndian, byte_buf)
+
+    _, err = conn_info.Connect.Write(buffer.Bytes())
     if err != nil {
         fmt.Println("write err : ", err)
         return err
@@ -157,10 +167,20 @@ func (c *TCPChannel) RecvPkg(id uint32, pkg *protocol.Pkg) error {
         return fmt.Errorf("id:%u is not exist", id)
     }
 
-    buf_len, err := conn_info.Connect.Read(conn_info.Buffer)
+    len_buf := make([]byte, 4)
+    _, err := io.ReadFull(conn_info.Connect, len_buf)
+    if err != nil {
+        return err
+    }
+
+    pkg_len := binary.LittleEndian.Uint32(len_buf)
+    recv_len, err := io.ReadAtLeast(conn_info.Connect, conn_info.Buffer, int(pkg_len))
+    if err != nil {
+        return err
+    }
     switch err {
     case nil:
-        err = pkg.Parse(conn_info.Buffer[:buf_len])
+        err = pkg.Parse(conn_info.Buffer[:recv_len])
         if err != nil {
             return err
         }

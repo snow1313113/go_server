@@ -8,6 +8,8 @@ import (
     "time"
     "context"
     "sync"
+    "bytes"
+    "encoding/binary"
     "protocol"
     pb "github.com/golang/protobuf/proto"
 )
@@ -35,13 +37,22 @@ func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
             pkg.Body = body
             pkg.Head.BodyLen = uint32(len(pkg.Body))
 
-            b, err := pkg.Bytes()
+            pkg_buf, err := pkg.Bytes()
             if err != nil {
                 fmt.Println("pkg bytes err:", err)
                 return
             }
 
-            _, err = conn.Write(b)
+            pkg_len := len(pkg_buf)
+            buffer := new(bytes.Buffer)
+            err = binary.Write(buffer, binary.LittleEndian, uint32(pkg_len))
+            if err != nil {
+                fmt.Println("binary.write pkg_len err:", err)
+                return
+            }
+            binary.Write(buffer, binary.LittleEndian, pkg_buf)
+
+            _, err = conn.Write(buffer.Bytes())
             if err != nil {
                 fmt.Println("write err : ", err)
                 return
@@ -60,8 +71,17 @@ func recvPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
         case <-ctx.Done():
             return
         default:
-            buf := make([]byte, 512)
-            buf_len, err := conn.Read(buf)
+            len_buf := make([]byte, 4)
+            _, err := io.ReadFull(conn, len_buf)
+            if err != nil {
+                fmt.Println("ReadFull err : ", err)
+                return
+            }
+
+            pkg_len := binary.LittleEndian.Uint32(len_buf)
+
+            buf := make([]byte, pkg_len)
+            buf_len, err := io.ReadFull(conn, buf)
             switch err {
             case nil:
                 pkg := &protocol.Pkg{}
