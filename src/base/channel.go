@@ -145,15 +145,7 @@ func (c *TCPChannel) SendPkg(id uint32, pkg *protocol.Pkg) error {
         return err
     }
 
-    pkg_len := len(byte_buf)
-    buffer := new(bytes.Buffer)
-    err = binary.Write(buffer, binary.LittleEndian, uint32(pkg_len))
-    if err != nil {
-        return err
-    }
-    binary.Write(buffer, binary.LittleEndian, byte_buf)
-
-    _, err = conn_info.Connect.Write(buffer.Bytes())
+    _, err = conn_info.Connect.Write(byte_buf)
     if err != nil {
         fmt.Println("write err : ", err)
         return err
@@ -167,20 +159,29 @@ func (c *TCPChannel) RecvPkg(id uint32, pkg *protocol.Pkg) error {
         return fmt.Errorf("id:%u is not exist", id)
     }
 
-    len_buf := make([]byte, 4)
-    _, err := io.ReadFull(conn_info.Connect, len_buf)
+    // 先收一个头部
+    head_buf := conn_info.Buffer[:protocol.HeadSize]
+    _, err := io.ReadFull(conn_info.Connect, head_buf)
     if err != nil {
         return err
     }
 
-    pkg_len := binary.LittleEndian.Uint32(len_buf)
-    recv_len, err := io.ReadAtLeast(conn_info.Connect, conn_info.Buffer, int(pkg_len))
+    byte_buf := bytes.NewBuffer(head_buf)
+    err = binary.Read(byte_buf, binary.LittleEndian, &pkg.Head)
+    if err != nil {
+        return err
+    }
+
+    // 再收body
+    body_buf := conn_info.Buffer[protocol.HeadSize:]
+    recv_len, err := io.ReadAtLeast(conn_info.Connect, body_buf, int(pkg.Head.BodyLen))
     if err != nil {
         return err
     }
     switch err {
     case nil:
-        err = pkg.Parse(conn_info.Buffer[:recv_len])
+        // todo 这里parse会再解析一遍头部，不优雅，其实还是应该收一个大buffer，然后丢给parse
+        _, err = pkg.Parse(conn_info.Buffer[:recv_len + int(protocol.HeadSize)])
         if err != nil {
             return err
         }

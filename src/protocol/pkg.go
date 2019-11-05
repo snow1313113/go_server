@@ -8,10 +8,17 @@ import (
 
 // todo 可以自定义个error struct更好一点
 var (
+    ErrParseHeadInvalid = errors.New("parse pkg head len is invalid")
+    ErrParseBodyBufferNotEnough = errors.New("parse pkg body len is not enough")
     ErrParseDataBodyInvalid = errors.New("parse pkg body data len is invalid")
     ErrByteDataBodyInvalid = errors.New("bytes pkg body data len is invalid")
 )
 
+var (
+    HeadSize = uint32(4 + 4 + 4 + 4 + 4)
+)
+
+// 需要保证头部是定长整数
 type PkgHead struct {
     Id uint32
     Cmd uint32
@@ -25,17 +32,21 @@ type Pkg struct {
     Body []byte
 }
 
-func (pkg *Pkg) Parse(data []byte) error {
+func (pkg *Pkg) Parse(data []byte) ([]byte, error) {
+    if len(data) < int(HeadSize) {
+        return data, ErrParseHeadInvalid
+    }
     buffer := bytes.NewBuffer(data)
     err := binary.Read(buffer, binary.LittleEndian, &pkg.Head)
     if err != nil {
-        return err
+        return data, err
     }
-    if pkg.Head.BodyLen != uint32(buffer.Len()) {
-        return ErrParseDataBodyInvalid
+    remain := buffer.Bytes()
+    if pkg.Head.BodyLen > uint32(buffer.Len()) {
+        return remain, ErrParseBodyBufferNotEnough
     }
-    pkg.Body = buffer.Bytes()
-    return nil
+    pkg.Body = remain[:pkg.Head.BodyLen]
+    return remain[pkg.Head.BodyLen:], nil
 }
 
 func (pkg *Pkg) Bytes() ([]byte, error) {

@@ -43,16 +43,7 @@ func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
                 return
             }
 
-            pkg_len := len(pkg_buf)
-            buffer := new(bytes.Buffer)
-            err = binary.Write(buffer, binary.LittleEndian, uint32(pkg_len))
-            if err != nil {
-                fmt.Println("binary.write pkg_len err:", err)
-                return
-            }
-            binary.Write(buffer, binary.LittleEndian, pkg_buf)
-
-            _, err = conn.Write(buffer.Bytes())
+            _, err = conn.Write(pkg_buf)
             if err != nil {
                 fmt.Println("write err : ", err)
                 return
@@ -71,25 +62,26 @@ func recvPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
         case <-ctx.Done():
             return
         default:
-            len_buf := make([]byte, 4)
-            _, err := io.ReadFull(conn, len_buf)
+            head_buf := make([]byte, protocol.HeadSize)
+            _, err := io.ReadFull(conn, head_buf)
             if err != nil {
                 fmt.Println("ReadFull err : ", err)
                 return
             }
 
-            pkg_len := binary.LittleEndian.Uint32(len_buf)
+            pkg := &protocol.Pkg{}
+            byte_buf := bytes.NewBuffer(head_buf)
+            err = binary.Read(byte_buf, binary.LittleEndian, &pkg.Head)
+            if err != nil {
+                fmt.Println("binary.Read err : ", err)
+                return
+            }
 
-            buf := make([]byte, pkg_len)
-            buf_len, err := io.ReadFull(conn, buf)
+            buf := make([]byte, pkg.Head.BodyLen)
+            _, err = io.ReadFull(conn, buf)
             switch err {
             case nil:
-                pkg := &protocol.Pkg{}
-                err = pkg.Parse(buf[:buf_len])
-                if err != nil {
-                    fmt.Println("parse err: ", err)
-                    return
-                }
+                pkg.Body = buf
                 fmt.Println("recv rsp: ", pkg)
             case io.EOF:
                 // 连接关闭，直接返回
