@@ -8,4 +8,4 @@ fi
 cd `dirname $0`
 CURRENT_DIR=`pwd`
 export GOPATH=${CURRENT_DIR}
-go get -d -u $1
+go get -d -u -v -f $1

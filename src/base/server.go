@@ -5,6 +5,7 @@ import (
     "sync"
     "protocol"
     pb "github.com/golang/protobuf/proto"
+    "github.com/golang/protobuf/protoc-gen-go/descriptor"
 )
 
 type Server struct {
@@ -24,8 +25,8 @@ func (svr *Server) registerhandle(methods []*RpcMethod) error {
     return nil
 }
 
-func (svr *Server) Registered(cmds []uint32, service interface{}) error {
-    return RegisterService(cmds, service, svr.registerhandle)
+func (svr *Server) Registered(service interface{}, service_desc *descriptor.ServiceDescriptorProto) error {
+    return collectServiceMethod(service, service_desc, svr.registerhandle)
 }
 
 func (svr *Server) Run() error {
@@ -62,17 +63,26 @@ func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
     }
 
     rsp := method.NewRsp()
-    err := method.Call(req, rsp)
-    if err != nil {
-        fmt.Println("cmd: ", pkg.Head.Cmd, " Call err: ", err)
-        return err
-    }
+    err := method.Call(pkg.Head.Id, req, rsp)
 
     rsp_pkg := protocol.Pkg{}
     rsp_pkg.Head.Id = pkg.Head.Id
     rsp_pkg.Head.Cmd = pkg.Head.Cmd
     rsp_pkg.Head.Seq = pkg.Head.Seq
-    rsp_pkg.Head.Ret = 0
+
+    if err != nil {
+        fmt.Println("cmd: ", pkg.Head.Cmd, " Call err: ", err)
+        // 返回的error必须是RpcError
+        rpc_err, ok := err.(*RpcError)
+        if !ok {
+            fmt.Println("cmd: ", pkg.Head.Cmd, " err:[", err, "] change error")
+            return err
+        }
+        rsp_pkg.Head.Ret = rpc_err.Code
+    } else {
+        rsp_pkg.Head.Ret = 0
+    }
+
     rsp_pkg.Body, err = pb.Marshal(rsp)
     if err != nil {
         fmt.Println(rsp, " Marshal err: ", err)

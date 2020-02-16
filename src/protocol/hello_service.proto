@@ -1,10 +1,11 @@
 syntax = "proto3";
+import "rpc_options.proto";
 import "hello.proto";
 
 package protocol;
 
 service ExampleService
 {
-    rpc Hello(HelloReq) returns(HelloRsp) { }
-    rpc Echo(EchoReq) returns(EchoRsp) { }
+    rpc Hello(HelloReq) returns(HelloRsp) { option (CMD) = 0x10000001; }
+    rpc Echo(EchoReq) returns(EchoRsp) { option (CMD) = 0x10000002; }
 }
