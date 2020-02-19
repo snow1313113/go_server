@@ -24,11 +24,11 @@ func sendPkg(ctx context.Context, wg *sync.WaitGroup, conn net.Conn) {
         default:
             pkg := protocol.Pkg{}
 
-            pkg.Head.Id = 0
-            pkg.Head.Cmd = 0x01
+            pkg.Head.Id = 1
+            pkg.Head.Cmd = 0x10000001
             pkg.Head.Seq = uint32(i)
 
-            req := protocol.HelloReq {"test hello", uint32(i*100)}
+            req := protocol.HelloReq {Name:"test hello", Num:uint32(i*100)}
             body, err := pb.Marshal(&req)
             if err != nil {
                 fmt.Println("Marshal err:", err)
