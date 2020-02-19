@@ -1,6 +1,6 @@
 syntax = "proto3";
 import "rpc_options.proto";
-import "hello.proto";
+import "example.proto";
 
 package protocol;
 

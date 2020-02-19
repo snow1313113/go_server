@@ -6,7 +6,6 @@ import (
     "encoding/binary"
 )
 
-// todo 可以自定义个error struct更好一点
 var (
     ErrParseHeadInvalid = errors.New("parse pkg head len is invalid")
     ErrParseBodyBufferNotEnough = errors.New("parse pkg body len is not enough")
