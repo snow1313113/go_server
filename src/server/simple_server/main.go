@@ -22,15 +22,20 @@ func main() {
 
     utils.Daemon(1, 1)
 
-    log, _ = utils.NewLogger(utils.DebugLevel, "")
+    var err error
+    log, err = utils.NewLogger(utils.DebugLevel, "./log/", "server")
+    if err != nil {
+        fmt.Println("new logger err: ", err)
+        os.Exit(0)
+    }
 	defer log.Close()
 
     log.Debug("new server")
 
-    svr := base.NewServer("localhost:1234", 512)
+    svr := base.NewServer("localhost:1234", 512, log)
     // 注意了，ExampleService的方法是用指针作为reciver的，所以这里要传指针给空接口，
     // 不然反射出来的就不是ExampleService了
-    err := svr.Registered(&ExampleService{}, protocol.ExampleService_Desc)
+    err = svr.Registered(&ExampleService{}, protocol.ExampleService_Desc)
     if err != nil {
         log.Error("regist service err: %v", err)
         return

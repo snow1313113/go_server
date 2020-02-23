@@ -1,7 +1,6 @@
 package base
 
 import (
-    "fmt"
     "reflect"
     pb "github.com/golang/protobuf/proto"
     "github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -37,17 +36,20 @@ func (rpc *RpcMethod) NewRsp() pb.Message {
 }
 
 // 这里如果传入context，则需要业务逻辑处理context，这样不好，所以暂时干脆不传入了
-func (rpc *RpcMethod) Call(gid uint32, req pb.Message, rsp pb.Message) error {
+func (rpc *RpcMethod) Call(gid uint32, req pb.Message, rsp pb.Message) (int32, error) {
+    log.Debug("call cmd[0x%08x]", rpc.cmd)
     args := []reflect.Value{rpc.receiver, reflect.ValueOf(gid), reflect.ValueOf(req), reflect.ValueOf(rsp)}
     ret := rpc.method.Func.Call(args)
     if ret == nil {
-        return NewRpcError(-1, "Func.Call ret expect []value, but is nil")
+        return -1, NewRpcError(-1, "Func.Call ret expect []value, but is nil")
     }
 
-    if ret[0].Interface() != nil {
-        return NewRpcError(-1, ret[0].Interface().(error).Error())
+    // 先判断一下类型对不对吧，因为Int()的内部实现如果转失败会直接panic
+    if ret[0].Kind() != reflect.Int32 {
+        return -1, NewRpcError(-1, "method return must be int32")
     }
-    return nil
+
+    return int32(ret[0].Int()), nil
 }
 
 // 既然rpc method的结构在这里定义了，那如何解析注册也得在这里了
@@ -62,7 +64,8 @@ func collectServiceMethod(service interface{}, service_desc *descriptor.ServiceD
     // 获取service的类型信息，可以从里面提取出所有的method
     st := reflect.TypeOf(service)
     if desc_methods_num != st.NumMethod() {
-        panic(fmt.Sprintln("desc method num %d != impl method num %d", desc_methods_num, st.NumMethod()))
+        log.Error("desc method num %d != impl method num %d", desc_methods_num, st.NumMethod())
+        return NewRpcError(-1, "")
     }
     rpc_methods := make([]*RpcMethod, 0, st.NumMethod())
     for i := 0; i < st.NumMethod(); i++ {
@@ -71,41 +74,48 @@ func collectServiceMethod(service interface{}, service_desc *descriptor.ServiceD
 
         method_desc, ok := method_desc_map[method.Name]
         if !ok {
-            panic(fmt.Sprintln("can not found method %s in desc", method.Name))
+            log.Error("can not found method %s in desc", method.Name)
+            return NewRpcError(-1, "")
         }
 
         // 所有的method 都有4个参数receiver(实际执行的对象), gid（包头的id), request(请求包), response(返回包)
         if method_type.NumIn() != 4 {
-            panic(fmt.Sprintln("method has wrong number of params:", method_type.NumIn()))
+            log.Error("method has wrong number of params : %d", method_type.NumIn())
+            return NewRpcError(-1, "")
         }
 
         receiver_type := method_type.In(0)
         // 调用对象要求是指针
         if receiver_type.Kind() != reflect.Ptr {
-            panic(fmt.Sprintln("method", method.Name, "receiver type not a pointer:", receiver_type))
+            log.Error("method(%s) receiver type not a pointer", method.Name, receiver_type)
+            return NewRpcError(-1, "")
         }
 
         gid_type := method_type.In(1)
         // gid参数要求是uint32
         if gid_type.Kind() != reflect.Uint32 {
-            panic(fmt.Sprintln("method", method.Name, "gid type not uint32:", gid_type))
+            log.Error("method(%s) gid type not uint32", method.Name, gid_type)
+            return NewRpcError(-1, "")
         }
 
         req_type := method_type.In(2)
         // 请求包参数要求是指针
         if req_type.Kind() != reflect.Ptr {
-            panic(fmt.Sprintln("method", method.Name, "request type not a pointer:", req_type))
+            log.Error("method(%s) request type not a pointer", method.Name, req_type)
+            return NewRpcError(-1, "")
         }
 
         rsp_type := method_type.In(3)
         // 返回包参数要求是指针
         if rsp_type.Kind() != reflect.Ptr {
-            panic(fmt.Sprintln("method", method.Name, "response type not a pointer:", rsp_type))
+            log.Error("method(%s) response type not a pointer", method.Name, rsp_type)
+            return NewRpcError(-1, "")
         }
 
         option_value, err := pb.GetExtension(method_desc.GetOptions(), protocol.E_CMD)
         if err != nil {
-            return err
+            log.Error("protobuf get extension err: %v", err)
+            return NewRpcError(-1, "")
         }
 
         cmd := (uint32)(*(option_value.(*uint32)))
@@ -122,7 +132,8 @@ func collectServiceMethod(service interface{}, service_desc *descriptor.ServiceD
     }
 
     if len(rpc_methods) != desc_methods_num {
-        panic("methods number not match")
+        log.Error("methods number %d not match %d", len(rpc_methods), desc_methods_num)
+        return NewRpcError(-1, "")
     }
 
     return register(rpc_methods)

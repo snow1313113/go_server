@@ -1,11 +1,16 @@
 package base
 
 import (
-    "fmt"
     "sync"
+    "fmt"
     "protocol"
+    "utils"
     pb "github.com/golang/protobuf/proto"
     "github.com/golang/protobuf/protoc-gen-go/descriptor"
+)
+
+var (
+    log *utils.Logger
 )
 
 type Server struct {
@@ -18,9 +23,11 @@ func (svr *Server) registerhandle(methods []*RpcMethod) error {
     for _, method := range methods {
         cmd := method.Cmd()
         if _, ok := svr.rpc[cmd]; ok {
-            return fmt.Errorf("cmd:%X is exit when regist", cmd)
+            log.Error("duplicate cmd[0x%08x]", cmd)
+            return NewRpcError(-1, "")
         }
         svr.rpc[cmd] = method
+        log.Debug("regist cmd[0x%08x]", cmd)
     }
     return nil
 }
@@ -48,45 +55,40 @@ func (svr *Server) Stop() error {
 }
 
 func (svr *Server) HandleRequest(pkg *protocol.Pkg) error {
+    log.Debug("recv: gid[%d] cmd[0x%08x] bytelen[%d]", pkg.Head.Id, pkg.Head.Cmd, len(pkg.Body))
     method, ok := svr.rpc[pkg.Head.Cmd]
     if !ok {
-        return fmt.Errorf("cmd:%X is not regist", pkg.Head.Cmd)
+        log.Error("cmd[0x%08x] is not found", pkg.Head.Cmd)
+        return NewRpcError(-1, "")
     }
 
     req := method.NewReq()
     if pkg.Body != nil {
         err := pb.Unmarshal(pkg.Body, req)
         if err != nil {
-            fmt.Println(pkg.Head.Cmd, "Unmarshal err: ", err)
+            log.Error("cmd 0x%x Unmarshal err: %v", pkg.Head.Cmd, err)
             return err
         }
     }
 
     rsp := method.NewRsp()
-    err := method.Call(pkg.Head.Id, req, rsp)
+    ret_code, err := method.Call(pkg.Head.Id, req, rsp)
+    if err != nil {
+        log.Error("cmd 0x%x Call err: %v", pkg.Head.Cmd, err)
+        return err
+    }
 
     rsp_pkg := protocol.Pkg{}
     rsp_pkg.Head.Id = pkg.Head.Id
     rsp_pkg.Head.Cmd = pkg.Head.Cmd
     rsp_pkg.Head.Seq = pkg.Head.Seq
-
-    if err != nil {
-        fmt.Println("cmd: ", pkg.Head.Cmd, " Call err: ", err)
-        // 返回的error必须是RpcError
-        rpc_err, ok := err.(*RpcError)
-        if !ok {
-            fmt.Println("cmd: ", pkg.Head.Cmd, " err:[", err, "] change error")
+    rsp_pkg.Head.Ret = ret_code
+    if ret_code == 0 {
+        rsp_pkg.Body, err = pb.Marshal(rsp)
+        if err != nil {
+            log.Error("cmd 0x%x Marshal err: %v", pkg.Head.Cmd, err)
             return err
         }
-        rsp_pkg.Head.Ret = rpc_err.Code
-    } else {
-        rsp_pkg.Head.Ret = 0
-    }
-
-    rsp_pkg.Body, err = pb.Marshal(rsp)
-    if err != nil {
-        fmt.Println(rsp, " Marshal err: ", err)
-        return err
     }
     rsp_pkg.Head.BodyLen = uint32(len(rsp_pkg.Body))
 
@@ -98,7 +100,14 @@ func (svr *Server) SendResponse(rsp *protocol.Pkg) error {
     return svr.channel.SendPkg(rsp.Head.Id, rsp)
 }
 
-func NewServer(addr string, cache_buf_len uint32) *Server {
+func NewServer(addr string, cache_buf_len uint32, logger *utils.Logger) *Server {
+    // todo 在这里初始化全局的变量，不是很好
+    log = logger
+    if log == nil {
+        fmt.Sprintln("############## here")
+        return nil
+    }
+
     svr := &Server{}
     svr.rpc = make(map[uint32]*RpcMethod)
     svr.is_running = false

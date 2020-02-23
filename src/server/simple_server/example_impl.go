@@ -6,19 +6,19 @@ import (
 
 type ExampleService struct{}
 
-func (s *ExampleService) Hello(id uint32, req *protocol.HelloReq, rsp *protocol.HelloRsp) error {
+func (s *ExampleService) Hello(id uint32, req *protocol.HelloReq, rsp *protocol.HelloRsp) int32 {
     log.Debug("handle hello rpc,: %v", req)
     rsp.Name = req.GetName()
     rsp.Num = req.GetNum()
     rsp.Seq = 1
-    return nil
+    return 0
 }
 
-func (s *ExampleService) Echo(id uint32, req *protocol.EchoReq, rsp *protocol.EchoRsp) error {
+func (s *ExampleService) Echo(id uint32, req *protocol.EchoReq, rsp *protocol.EchoRsp) int32 {
     log.Debug("handle echo rpc,: %v", req)
     rsp.RspInfo = req.GetInfo()
     rsp.Seq = 2
-    return nil
+    return 0
 }
 
 
