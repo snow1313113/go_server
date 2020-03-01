@@ -1,8 +1,14 @@
 syntax = "proto3";
 import "google/protobuf/descriptor.proto";
 
+package protocol;
+
 extend google.protobuf.MethodOptions
 {
     // method cmd
     uint32 CMD = 50001;
+    // dont need response
+    bool DONT_RSP = 50002;
+    // time out seconds
+    uint32 TIME_OUT = 50003;
 }

@@ -10,6 +10,7 @@ import (
 type RpcMethod struct {
     cmd uint32
     name string
+    need_rsp bool
     // 最终调用的对象、请求包、返回包都是类型接口，后面通过反射再获取实际类型
     receiver reflect.Value
     req_type reflect.Type
@@ -23,6 +24,10 @@ func (rpc *RpcMethod) Cmd() uint32 {
 
 func (rpc *RpcMethod) Name() string {
     return rpc.name
+}
+
+func (rpc *RpcMethod) NeedRsp() bool {
+    return rpc.need_rsp
 }
 
 func (rpc *RpcMethod) NewReq() pb.Message {
@@ -118,10 +123,18 @@ func collectServiceMethod(service interface{}, service_desc *descriptor.ServiceD
             return NewRpcError(-1, "")
         }
 
+        dont_rsp := false
+        dont_rsp_option, err := pb.GetExtension(method_desc.GetOptions(), protocol.E_DONT_RSP)
+        if err == nil {
+            log.Debug("method(%s) do not need response", method.Name)
+            dont_rsp = *(dont_rsp_option.(*bool))
+        }
+
         cmd := (uint32)(*(option_value.(*uint32)))
         rpc_method := &RpcMethod{
             cmd,
             method.Name,
+            !dont_rsp,
             reflect.ValueOf(service),
             req_type,
             rsp_type,
