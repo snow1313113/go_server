@@ -10,7 +10,7 @@ import (
     "sync"
     "bytes"
     "encoding/binary"
-    "protocol"
+    "pepper/src/protocol"
     pb "github.com/golang/protobuf/proto"
 )
 

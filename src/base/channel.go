@@ -10,7 +10,7 @@ import (
     "time"
     "bytes"
     "encoding/binary"
-    "protocol"
+    "pepper/src/protocol"
 )
 
 type ChannelStatus uint32

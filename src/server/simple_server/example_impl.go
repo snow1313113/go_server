@@ -1,7 +1,7 @@
 package main
 
 import (
-    "protocol"
+    "pepper/src/protocol"
 )
 
 type ExampleService struct{}

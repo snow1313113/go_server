@@ -7,7 +7,7 @@ fi
 
 cd `dirname $0`
 CURRENT_DIR=`pwd`
-export GOPATH=${CURRENT_DIR}
+#export GOPATH=${CURRENT_DIR}
 cd src/$1
-#go build .
-go install .
+go build -o ../../../bin/ .
+#go install .

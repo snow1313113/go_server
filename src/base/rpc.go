@@ -4,7 +4,7 @@ import (
     "reflect"
     pb "github.com/golang/protobuf/proto"
     "github.com/golang/protobuf/protoc-gen-go/descriptor"
-    "protocol"
+    "pepper/src/protocol"
 )
 
 type RpcMethod struct {

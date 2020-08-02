@@ -2,8 +2,8 @@ package base
 
 import (
     "sync"
-    "protocol"
-    "utils"
+    "pepper/src/protocol"
+    "pepper/src/utils"
     pb "github.com/golang/protobuf/proto"
     "github.com/golang/protobuf/protoc-gen-go/descriptor"
 )
