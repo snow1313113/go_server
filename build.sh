@@ -5,9 +5,8 @@ if [ $# -lt 1 ]; then
     exit -1
 fi
 
+export GO111MODULE=on
+export GOPROXY=https://goproxy.io
 cd `dirname $0`
-CURRENT_DIR=`pwd`
-#export GOPATH=${CURRENT_DIR}
 cd src/$1
 go build -o ../../../bin/ .
-#go install .
